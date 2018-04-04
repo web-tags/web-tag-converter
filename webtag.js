@@ -12,12 +12,13 @@ const BABEL = require("babel-core");
 processTemplate = X => {
 	return new Promise((resolve, reject) => {
 		if(!X.src.template) resolve('');
-		console.log("\tprocessTemplate",X.src.template.length);
+		console.log("\tprocessTemplate");
 		X.target.template = HTMmin(X.src.template, {
 			removeComments: true,
 			collapseWhitespace: true
 			// removeAttributeQuotes: true
 		});
+		console.log("\t   ",X.src.template.length,'>>',X.target.template.length);
 		resolve(X);
     });
 }
@@ -28,23 +29,25 @@ processStyle = X => {
 }
 sass = X => {
 	return new Promise((resolve, reject) => {
-		console.log("\tprocessSASS",X.src.style.length);
+		console.log("\tprocessSASS");
 		X.target.style = SASS.renderSync({
 			data: X.src.style,
 			indentedSyntax: true,
 			outputStyle: "compressed"
 		}).css.toString();
+		console.log("\t   ",X.src.style.length,'>>',X.target.style.length);
 		resolve(X);
 	});
 }
 less = X => {
 	return new Promise((resolve, reject) => {
-		console.log("\tprocessLESS",X.src.style.length);
+		console.log("\tprocessLESS");
 		LESS.render(X.src.style, {compress:true})
 		    .then((output) => {
 		    	// console.log(output.css);
 		    	if(output.error) reject(output.error);
 		    	X.target.style = output.css;
+				console.log("\t   ",X.src.style.length,'>>',X.target.style.length);
 		    	resolve(X);
 		        // output.css = string of css
 		        // output.map = string of sourcemap
@@ -61,7 +64,7 @@ less = X => {
 // (script, tagname, template, tag)
 processScript = X => {
 	return new Promise((resolve, reject) => {
-		console.log("\tprocessScript",X.src.script.length);
+		console.log("\tprocessScript");
 		var TPL = X.target.template ? `this.attachShadow({mode: 'open'}).appendChild(document.querySelector('template#${X.tagname}').content.cloneNode(true))` : '';
 		var $ = hasAttr(X.$('script'),'$') ? `$(q){return this.shadowRoot.querySelector(q)}` : '';
 		var $$ = hasAttr(X.$('script'),'$$') ? `$$(q){return this.shadowRoot.querySelectorAll(q)}` : '';
@@ -75,6 +78,7 @@ window.customElements.define('${X.tagname}', class extends HTMLElement {
  	${X.src.script}
 });`;
 		X.target.script = BABEL.transform(X.target.script, {babelrc:false,comments:false,compact:false,minified:true,code:true,presets:['es2016'],plugins:["minify-mangle-names","minify-simplify","transform-remove-console"]}).code;
+		console.log("\t   ",X.src.script.length,'>>',X.target.script.length);
 		resolve(X);
 	});
 }
@@ -133,13 +137,31 @@ make = filename => {
 
 // make('weather/moon-phase.tag.html');
 
-console.log('waiting for input...\n\n');
-fs.watch(".", {
+// process.argv.forEach(function (val, index, array) {
+//   console.log(index + ': ' + val);
+// });
+
+var watchPath = process.argv[2];//'../';
+if(!watchPath) {console.error('no watchPath');return;}
+
+console.log(`\n\nwatching ${watchPath}\n\n`);
+fs.watch(watchPath, {
 	recursive: true
 }, (event, filename) => {
 	if (!filename.includes('.tag.html')) return;
-	make(filename);
+	make(watchPath+filename);
 });
+
+
+
+
+
+
+
+
+
+
+
 
 
 
